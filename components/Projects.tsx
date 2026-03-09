@@ -507,6 +507,8 @@ export default function Projects() {
                     muted
                     loop
                     playsInline
+                    preload="metadata"
+                    poster={project.media.images?.[0]}
                   />
                 </div>
               )}
@@ -525,6 +527,7 @@ export default function Projects() {
                           src={img}
                           alt={`Screenshot ${imgIndex + 1}`}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       </button>
                     ))}
@@ -822,6 +825,7 @@ export default function Projects() {
                           src={project.media.images[activeCarouselIndex[index] || 0]}
                           alt={`${project.title} - Architecture`}
                           className="w-full h-full object-contain transition-opacity duration-500"
+                          loading="eager"
                         />
                         {project.media.images.length > 1 && (
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
