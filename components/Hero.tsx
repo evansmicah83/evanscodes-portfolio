@@ -5,16 +5,10 @@ import { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 
 export default function Hero() {
-  const [positions, setPositions] = useState<Array<{ x: number; y: number }>>([])
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Generate random positions only on client side
-    setPositions(
-      [...Array(20)].map(() => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight
-      }))
-    )
+    setMounted(true)
   }, [])
 
   const scrollToSection = (id: string) => {
@@ -86,60 +80,64 @@ export default function Hero() {
       </div>
 
       {/* Floating mathematical symbols */}
-      <div className="absolute inset-0">
-        {['∫', '∑', '∆', '∞', 'π', '√', '∂', 'λ'].map((symbol, i) => (
-          <motion.div
-            key={symbol}
-            className="absolute text-blue-400/20 text-4xl font-bold select-none"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
-              opacity: 0,
-              rotate: 0
-            }}
-            animate={{
-              y: [null, -200],
-              opacity: [0, 0.3, 0],
-              rotate: [0, 360],
-              scale: [0.8, 1.2, 0.8]
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              delay: i * 2,
-              ease: "easeInOut"
-            }}
-          >
-            {symbol}
-          </motion.div>
-        ))}
-      </div>
+      {mounted && (
+        <div className="absolute inset-0">
+          {['∫', '∑', '∆', '∞', 'π', '√', '∂', 'λ'].map((symbol, i) => (
+            <motion.div
+              key={symbol}
+              className="absolute text-blue-400/20 text-4xl font-bold select-none"
+              initial={{
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                opacity: 0,
+                rotate: 0
+              }}
+              animate={{
+                y: [null, -200],
+                opacity: [0, 0.3, 0],
+                rotate: [0, 360],
+                scale: [0.8, 1.2, 0.8]
+              }}
+              transition={{
+                duration: 15,
+                repeat: Infinity,
+                delay: i * 2,
+                ease: "easeInOut"
+              }}
+            >
+              {symbol}
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Animated particles */}
-      <div className="absolute inset-0">
-        {[...Array(25)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-gradient-to-r from-blue-400/60 to-purple-400/60 rounded-full"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: typeof window !== 'undefined' ? window.innerHeight + 50 : 850,
-              opacity: 0
-            }}
-            animate={{
-              y: -50,
-              opacity: [0, 1, 0],
-              scale: [0, 1, 0]
-            }}
-            transition={{
-              duration: 12,
-              repeat: Infinity,
-              delay: i * 0.5,
-              ease: "linear"
-            }}
-          />
-        ))}
-      </div>
+      {mounted && (
+        <div className="absolute inset-0">
+          {[...Array(25)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-gradient-to-r from-blue-400/60 to-purple-400/60 rounded-full"
+              initial={{
+                x: Math.random() * window.innerWidth,
+                y: window.innerHeight + 50,
+                opacity: 0
+              }}
+              animate={{
+                y: -50,
+                opacity: [0, 1, 0],
+                scale: [0, 1, 0]
+              }}
+              transition={{
+                duration: 12,
+                repeat: Infinity,
+                delay: i * 0.5,
+                ease: "linear"
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Geometric shapes */}
       <div className="absolute inset-0">

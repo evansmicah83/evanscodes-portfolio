@@ -45,7 +45,7 @@ export default function About() {
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
                 >
-                  I'm a <span className="text-blue-400 font-semibold">Mathematics and Computer Science professional</span> with 
+                  I&apos;m a <span className="text-blue-400 font-semibold">Mathematics and Computer Science professional</span> with 
                   expertise in building efficient and intelligent software systems. My background combines mathematical 
                   reasoning with practical software development to solve complex problems.
                 </motion.p>
@@ -89,7 +89,7 @@ export default function About() {
                 transition={{ duration: 0.6, delay: 1.2 }}
               >
                 <p className="text-base sm:text-lg text-gray-400 italic">
-                  <span className="text-cyan-400 font-semibold not-italic">BSc Mathematics & Computer Science</span> from <span className="text-cyan-400 font-semibold not-italic">Maseno University</span>—the only university in the world on the Equator—where global perspective isn't just a mindset, it's a daily walk between hemispheres.
+                  <span className="text-cyan-400 font-semibold not-italic">BSc Mathematics & Computer Science</span> from <span className="text-cyan-400 font-semibold not-italic">Maseno University</span>—the only university in the world on the Equator—where global perspective isn&apos;t just a mindset, it&apos;s a daily walk between hemispheres.
                 </p>
               </motion.div>
             </div>
