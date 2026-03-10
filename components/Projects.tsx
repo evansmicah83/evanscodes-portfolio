@@ -255,6 +255,24 @@ export default function Projects() {
     if (isRightSwipe) prevLightboxImage()
   }
 
+  // Eager preload all project media for instant display
+  useEffect(() => {
+    const allProjects = [...projects, ...conceptProjects]
+
+    allProjects.forEach((project) => {
+      project.media.images?.forEach((src) => {
+        const img = new Image()
+        img.src = src
+      })
+
+      if (project.media.video) {
+        const video = document.createElement('video')
+        video.preload = 'auto'
+        video.src = project.media.video
+      }
+    })
+  }, [])
+
   // Auto-scroll carousel
   useEffect(() => {
     const intervals: { [key: number]: NodeJS.Timeout } = {}
@@ -506,9 +524,14 @@ export default function Projects() {
                     className="w-full h-full object-contain"
                     muted
                     loop
+                    autoPlay
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     poster={project.media.images?.[0]}
+                    onLoadedData={(e) => {
+                      const video = e.currentTarget
+                      video.play().catch(() => {})
+                    }}
                   />
                 </div>
               )}
@@ -527,7 +550,9 @@ export default function Projects() {
                           src={img}
                           alt={`Screenshot ${imgIndex + 1}`}
                           className="w-full h-full object-cover"
-                          loading="lazy"
+                          loading="eager"
+                          decoding="async"
+                          fetchpriority="high"
                         />
                       </button>
                     ))}
