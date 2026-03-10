@@ -31,7 +31,12 @@ export default function Projects() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isAutoScrolling, setIsAutoScrolling] = useState<{ [key: number]: boolean }>({})
-  const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({})
+  const [videoModalProject, setVideoModalProject] = useState<number | null>(null)
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [isVideoModalLoading, setIsVideoModalLoading] = useState(false)
+  const [videoPreloadStrategy, setVideoPreloadStrategy] = useState<'none' | 'metadata' | 'auto'>('none')
+  const videoModalRef = useRef<HTMLVideoElement | null>(null)
+
 
   const projects: Project[] = [
     {
@@ -255,7 +260,7 @@ export default function Projects() {
     if (isRightSwipe) prevLightboxImage()
   }
 
-  // Eager preload all project media for instant display
+  // Preload only images to preserve video bandwidth and defer video download until user intent
   useEffect(() => {
     const allProjects = [...projects, ...conceptProjects]
 
@@ -264,14 +269,50 @@ export default function Projects() {
         const img = new Image()
         img.src = src
       })
-
-      if (project.media.video) {
-        const video = document.createElement('video')
-        video.preload = 'auto'
-        video.src = project.media.video
-      }
     })
   }, [])
+
+  const openVideoModal = (projectIndex: number) => {
+    setVideoModalProject(projectIndex)
+    setIsVideoModalOpen(true)
+    setIsVideoModalLoading(true)
+    setVideoPreloadStrategy('auto')
+  }
+
+  const warmVideoBuffer = (projectIndex: number) => {
+    setVideoPreloadStrategy('metadata')
+    // additional decloaked prefetch action if user is very likely to play
+    const videoUrl = projects[projectIndex].media.video?.replace(/\.mp4$/i, '.webm') || projects[projectIndex].media.video || ''
+    if (videoUrl) {
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'video'
+      link.href = encodeURI(videoUrl)
+      document.head.appendChild(link)
+      setTimeout(() => document.head.removeChild(link), 10000)
+    }
+  }
+
+  const closeVideoModal = () => {
+    if (videoModalRef.current) {
+      videoModalRef.current.pause()
+      videoModalRef.current.currentTime = 0
+    }
+    setIsVideoModalOpen(false)
+    setVideoModalProject(null)
+    setIsVideoModalLoading(false)
+  }
+
+  useEffect(() => {
+    if (isVideoModalOpen && videoModalRef.current) {
+      const videoElem = videoModalRef.current
+      videoElem.load()
+      videoElem.play().catch(() => {
+        // If autoplay is blocked, user still can play via controls.
+      })
+      setIsVideoModalLoading(true)
+    }
+  }, [isVideoModalOpen, videoModalProject])
 
   // Auto-scroll carousel
   useEffect(() => {
@@ -290,38 +331,6 @@ export default function Projects() {
       Object.values(intervals).forEach(interval => clearInterval(interval))
     }
   }, [activeCarouselIndex, isAutoScrolling])
-
-  // Video autoplay on scroll
-  useEffect(() => {
-    const observers: IntersectionObserver[] = []
-
-    projects.forEach((project, index) => {
-      if (project.media.video) {
-        const videoElement = videoRefs.current[index]
-        if (videoElement) {
-          const observer = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                  videoElement.play().catch(() => {})
-                } else {
-                  videoElement.pause()
-                }
-              })
-            },
-            { threshold: 0.5 }
-          )
-
-          observer.observe(videoElement)
-          observers.push(observer)
-        }
-      }
-    })
-
-    return () => {
-      observers.forEach(observer => observer.disconnect())
-    }
-  }, [])
 
   const pauseAutoScroll = (index: number) => {
     setIsAutoScrolling(prev => ({ ...prev, [index]: false }))
@@ -387,14 +396,17 @@ export default function Projects() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {projects.map((project, index) => (
-            <motion.div
-              key={index}
-              className="group bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl border border-gray-700/50 rounded-3xl overflow-hidden hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: index * 0.15 }}
-            >
+          {projects.map((project, index) => {
+            const projectPoster = project.media.images?.[0] || ''
+
+            return (
+              <motion.div
+                key={index}
+                className="group bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl border border-gray-700/50 rounded-3xl overflow-hidden hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.15 }}
+              >
               {/* Animated Architecture Diagram for Concept Projects */}
               {project.media.type === 'diagram' && (
                 <div className="relative h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-gray-900 via-gray-800 to-black overflow-hidden">
@@ -517,22 +529,38 @@ export default function Projects() {
 
               {/* Video Section */}
               {(project.media.type === 'video' || project.media.type === 'both') && project.media.video && (
-                <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden bg-gradient-to-br from-gray-900 to-black">
-                  <video
-                    ref={(el) => { videoRefs.current[index] = el }}
-                    src={project.media.video}
-                    className="w-full h-full object-contain"
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    preload="auto"
-                    poster={project.media.images?.[0]}
-                    onLoadedData={(e) => {
-                      const video = e.currentTarget
-                      video.play().catch(() => {})
-                    }}
+                <div
+                  className="relative h-64 sm:h-80 lg:h-96 overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-black shadow-[0_10px_35px_rgba(0,0,0,0.45)] transition-all duration-300 ease-out hover:scale-[1.02]"
+                >
+                  <img
+                    src={projectPoster}
+                    alt={`${project.title} preview`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
                   />
+
+                  <div className="absolute inset-0 bg-black/35" />
+                  <div className="absolute top-4 left-4 rounded-full bg-blue-500/70 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                    Video Demo
+                  </div>
+
+                  <button
+                    className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 hover:opacity-100 opacity-0"
+                    onMouseEnter={() => warmVideoBuffer(index)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openVideoModal(index)
+                    }}
+                    aria-label={`Play ${project.title} video`}
+                  >
+                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white/20 border border-white/40 backdrop-blur-xl text-white hover:bg-white/30 transition-all duration-300">
+                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </button>
                 </div>
               )}
 
@@ -552,7 +580,7 @@ export default function Projects() {
                           className="w-full h-full object-cover"
                           loading="eager"
                           decoding="async"
-                          fetchpriority="high"
+                          fetchPriority="high"
                         />
                       </button>
                     ))}
@@ -744,7 +772,7 @@ export default function Projects() {
                 </div>
               </button>
             </motion.div>
-          ))}
+          )})}
 
           {/* Explore More Projects Card */}
           <motion.div
@@ -851,6 +879,7 @@ export default function Projects() {
                           alt={`${project.title} - Architecture`}
                           className="w-full h-full object-contain transition-opacity duration-500"
                           loading="eager"
+                          fetchPriority="high"
                         />
                         {project.media.images.length > 1 && (
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
@@ -968,6 +997,83 @@ export default function Projects() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Video playback modal */}
+      <AnimatePresence>
+        {isVideoModalOpen && videoModalProject !== null && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeVideoModal}
+          >
+            <motion.div
+              className="relative w-full max-w-4xl rounded-2xl bg-gray-900 shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={closeVideoModal}
+                className="absolute top-3 right-3 z-20 rounded-full border border-white/20 bg-black/40 p-2 text-white hover:bg-black/60"
+                aria-label="Close video"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="relative">
+                {isVideoModalLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/60">
+                    <div className="flex flex-col items-center gap-2 text-white text-sm">
+                      <div className="h-10 w-10 rounded-full border-4 border-white/40 border-t-blue-500 animate-spin" />
+                      Loading video...
+                    </div>
+                  </div>
+                )}
+
+                <video
+                  ref={videoModalRef}
+                  key={videoModalProject ?? 'video-modal'}
+                  className="w-full h-auto max-h-[80vh] bg-black rounded-2xl"
+                  controls
+                  muted
+                  volume={0}
+                  autoPlay
+                  playsInline
+                  preload={videoPreloadStrategy}
+                  controlsList="nodownload noremoteplayback"
+                  disablePictureInPicture
+                  onLoadedData={() => {
+                    setIsVideoModalLoading(false)
+                    if (videoModalRef.current) {
+                      videoModalRef.current.volume = 0
+                      videoModalRef.current.muted = true
+                      videoModalRef.current.play().catch(() => {})
+                    }
+                  }}
+                  onCanPlay={() => {
+                    setIsVideoModalLoading(false)
+                  }}
+                  onWaiting={() => setIsVideoModalLoading(true)}
+                  onError={() => {
+                    setIsVideoModalLoading(false)
+                  }}
+                  poster={projects[videoModalProject].media.images?.[0] || ''}
+                >
+                  <source src={encodeURI(projects[videoModalProject].media.video?.replace(/\.mp4$/i, '.webm') || '')} type="video/webm" />
+                  <source src={encodeURI(projects[videoModalProject].media.video?.replace(/\.mp4$/i, '.ogv') || '')} type="video/ogg" />
+                  <source src={encodeURI(projects[videoModalProject].media.video || '')} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Professional Image Lightbox Modal */}
       <AnimatePresence>
