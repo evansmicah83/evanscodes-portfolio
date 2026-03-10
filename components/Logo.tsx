@@ -13,6 +13,9 @@ export default function Logo({ onClick }: { onClick: () => void }) {
           src="/logo/Evanscodes logo.png" 
           alt="Evans Micah Logo" 
           className="h-full w-auto object-contain scale-150"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
         />
       </div>
     </button>

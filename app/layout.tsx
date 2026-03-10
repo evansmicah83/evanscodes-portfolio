@@ -20,6 +20,16 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+        {/* Critical asset prioritization for faster initial rendering */}
+        <link rel="preload" href="/edt5.jpg" as="image" />
+        <link rel="preload" href="/logo/Evanscodes logo.png" as="image" />
+        <link rel="preload" href="/smart-sale/smart-sale.png" as="image" />
+        <link rel="preload" href="/CIRAS/ciras.png" as="image" />
+        <link rel="preload" href="/Anony/anony.png" as="image" />
+        <link rel="preload" href="/smart-sale/smart video.mp4" as="video" type="video/mp4" />
+        <link rel="preload" href="/CIRAS/ciras video.mp4" as="video" type="video/mp4" />
+        <link rel="preload" href="/Anony/anony video.mp4" as="video" type="video/mp4" />
       </head>
       <body className="antialiased">
         <ThemeProvider>{children}</ThemeProvider>

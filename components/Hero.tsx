@@ -176,6 +176,9 @@ export default function Hero() {
                   src="/edt5.jpg"
                   alt="Evans Micah"
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                  fetchpriority="high"
                 />
               </div>
               {/* Animated ring */}
